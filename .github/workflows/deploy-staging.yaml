@@ -1,0 +1,49 @@
+name: deploy-staging
+
+on:
+  push:
+    branches:
+      - development
+  workflow_dispatch:
+
+concurrency:
+  group: "${{ github.ref }}"
+  cancel-in-progress: true
+
+env:
+  GCP_PROJECT_ID_STAGING: jenny-dev-platform
+  STAGING_CI_CD_KEY_JSON: ${{ vars.STAGING_CI_CD_KEY_JSON }}
+
+jobs:
+  tests:
+    uses: ./.github/workflows/tests.yaml
+  deployment:
+    needs: tests
+    runs-on: ubuntu-latest
+    container: google/cloud-sdk:latest
+    steps:
+    - uses: actions/checkout@v3.5.0
+
+    # create json key file
+    - run: printf '%s' "$STAGING_CI_CD_KEY_JSON" > key.json
+
+    # Auth gcp
+    - name: Auth_GCP
+      run: |
+        gcloud auth activate-service-account devops@$GCP_PROJECT_ID_STAGING.iam.gserviceaccount.com --key-file=$STAGING_CI_CD_KEY_JSON --project=$GCP_PROJECT_ID_STAGING
+        gcloud config set project $GCP_PROJECT_ID_STAGING
+
+    - name: deploy_wa_receiver
+      run: |
+        gcloud functions deploy wa-receiver
+          --region=us-central1
+          --runtime=python38
+          --project $GCP_PROJECT_ID_STAGING
+          --entry-point=wa_receiver
+          --trigger-http
+          --env-vars-file $ENV_FILE_STAGING
+          --allow-unauthenticated
+          --service-account=gs-cms@$GCP_PROJECT_ID_STAGING.iam.gserviceaccount.com
+          --vpc-connector=dbs-connector
+
+
