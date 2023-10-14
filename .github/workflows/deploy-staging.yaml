@@ -35,13 +35,13 @@ jobs:
 
     - name: deploy_wa_receiver
       run: |
-        gcloud functions deploy wa-receiver
+        gcloud functions deploy wa-receiver2
           --region=us-central1
           --runtime=python38
           --project $GCP_PROJECT_ID_STAGING
-          --entry-point=wa_receiver
+          --entry-point=wa_receiver2
           --trigger-http
-          --env-vars-file $ENV_FILE_STAGING
+          --env-vars-file=wa_services/stg-env-vars.yaml
           --allow-unauthenticated
           --service-account=gs-cms@$GCP_PROJECT_ID_STAGING.iam.gserviceaccount.com
           --vpc-connector=dbs-connector
